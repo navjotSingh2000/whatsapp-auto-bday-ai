@@ -1,9 +1,11 @@
 package net.navjotsingh.wabai.jobs;
 
-import net.navjotsingh.wabai.services.AutomationService;
+import net.navjotsingh.wabai.service.AutomationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
 
 @Component
 public class BirthdayCheckJob {

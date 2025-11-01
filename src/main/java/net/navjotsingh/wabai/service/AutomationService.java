@@ -1,4 +1,6 @@
-package net.navjotsingh.wabai.services;
+package net.navjotsingh.wabai.service;
+
+import java.io.IOException;
 
 public interface AutomationService {
     boolean createSession();
