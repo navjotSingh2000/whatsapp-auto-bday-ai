@@ -1,0 +1,21 @@
+package net.navjotsingh.wabai.jobs;
+
+import net.navjotsingh.wabai.services.AutomationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Component
+public class BirthdayCheckJob {
+    @Autowired
+    private final AutomationService automationService;
+
+    public BirthdayCheckJob(AutomationService automationService) {
+        this.automationService = automationService;
+    }
+
+    @Scheduled(cron = "0 0 9 * * ?")  // run every day at 9 AM
+    public void runJob() {
+        automationService.createSession();
+    }
+}
