@@ -124,8 +124,7 @@ public class AutomationServiceImpl implements AutomationService {
             page.getByRole(AriaRole.PARAGRAPH).click();
             page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
                     .fill(searchFor);
-            page.getByText(searchFor, new Page.GetByTextOptions().setExact(true))
-                    .click();
+            page.locator("span[title='" + searchFor + "']").click();
 
             page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + searchFor))
                     .getByRole(AriaRole.PARAGRAPH).click();
