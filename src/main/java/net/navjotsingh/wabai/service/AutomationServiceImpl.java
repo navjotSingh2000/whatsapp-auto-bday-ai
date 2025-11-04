@@ -7,15 +7,14 @@ import net.navjotsingh.wabai.model.Birthday;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AutomationServiceImpl implements AutomationService {
     private final BirthdayManagerService birthdayManagerService;
+    private final GenerativeAiService generativeAiService;
     private List<Birthday> birthdays;
 
     private Playwright playwright;
@@ -26,29 +25,32 @@ public class AutomationServiceImpl implements AutomationService {
     @Value("${COUNTRY}")
     private String country;
 
-    public AutomationServiceImpl(BirthdayManagerService birthdayManagerService) {
+    public AutomationServiceImpl(BirthdayManagerService birthdayManagerService, GenerativeAiService generativeAiService) {
         this.birthdayManagerService = birthdayManagerService;
         this.birthdays = birthdayManagerService.getBirthdays();
+        this.generativeAiService = generativeAiService;
     }
 
     @Override
     public void init() {
-        List<Birthday> birthdays = findBirthdaysForToday();
-        if(birthdays.size() > 0) {
-            boolean success = createSession();
-            if(!success) return;
+//        List<Birthday> birthdays = findBirthdaysForToday();
+//        if(birthdays.size() < 0) {
+//            System.out.println("No birthday today - " + LocalDate.now());
+//        }
+//
+//        boolean success = createSession();
+//        if(!success) return;
+//
+//        boolean sessionReady = verifySavedState();
+//        if(!sessionReady) return;
 
-            boolean sessionReady = verifySavedState();
-            if(!sessionReady) return;
+        generativeAiService.createImage("Navjot Singh", "Happy Birthday");
 
-            // i will pass the personal message into ai here to get the message,
-            // but for test i am just passing the personal message as message
-            birthdays.forEach(b -> sendMessage(b.getName(), b.getPersonalMessage()));
+//        birthdays.forEach(b -> {
+//            sendMessage(b.getName(), b.getPersonalMessage());
+//        });
 
-            closeSession();
-        } else {
-            System.out.println("No birthday today - " + LocalDate.now());
-        }
+//        closeSession();
     }
 
     @Override
