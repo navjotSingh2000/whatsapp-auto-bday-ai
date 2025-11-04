@@ -20,8 +20,8 @@ public class BirthdayCheckJob {
 
     @Scheduled(cron = "0 0 9 * * ?")  // run every day at 9 AM
     public void runJob() {
-        List<Birthday> list = automationService.findBirthdays();
-        System.out.println(list);
-        automationService.createSession();
+//        List<Birthday> list = automationService.findBirthdays();
+//        System.out.println(list);
+        automationService.init();
     }
 }

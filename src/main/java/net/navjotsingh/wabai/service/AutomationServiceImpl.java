@@ -7,38 +7,55 @@ import net.navjotsingh.wabai.model.Birthday;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class AutomationServiceImpl implements AutomationService {
     private final BirthdayManagerService birthdayManagerService;
+    private final GenerativeAiService generativeAiService;
     private List<Birthday> birthdays;
+
+    private Playwright playwright;
+    private BrowserContext context;
+    private Page whatsappPage;
     @Value("${PHONE_NUMBER}")
     private String phoneNumber;
     @Value("${COUNTRY}")
     private String country;
 
-    public AutomationServiceImpl(BirthdayManagerService birthdayManagerService) {
+    public AutomationServiceImpl(BirthdayManagerService birthdayManagerService, GenerativeAiService generativeAiService) {
         this.birthdayManagerService = birthdayManagerService;
         this.birthdays = birthdayManagerService.getBirthdays();
+        this.generativeAiService = generativeAiService;
     }
 
     @Override
     public void init() {
-        int countBirthdays = findBirthdays().size();
-        if(countBirthdays > 0) {
-            createSession();
-        } else {
+        List<Birthday> birthdays = findBirthdaysForToday();
+        if(birthdays.size() < 0) {
             System.out.println("No birthday today - " + LocalDate.now());
         }
+
+        boolean success = createSession();
+        if(!success) return;
+
+        boolean sessionReady = verifySavedState();
+        if(!sessionReady) return;
+
+//        generativeAiService.generateBirthdayCardImage("Navjot Singh", "Happy Birthday");
+
+        birthdays.forEach(b -> {
+            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
+            sendMessage(b.getName(), birthdayWish);
+        });
+
+        closeSession();
     }
 
     @Override
-    public List<Birthday> findBirthdays() {
+    public List<Birthday> findBirthdaysForToday() {
         return birthdays
                 .stream()
                 .filter(birthday -> birthday.getBirthDate().getMonth().equals(LocalDate.now().getMonth()))
@@ -50,9 +67,9 @@ public class AutomationServiceImpl implements AutomationService {
     public boolean createSession() {
         System.out.println("creating a session");
 
-        try (Playwright playwright = Playwright.create()) {
-
-            BrowserContext context = playwright.chromium().launchPersistentContext(
+        try {
+            playwright = Playwright.create();
+            context = playwright.chromium().launchPersistentContext(
                     Paths.get("whatsapp-session"), // persistent folder where session data will be stored
                     new BrowserType.LaunchPersistentContextOptions()
                             .setHeadless(true)
@@ -70,71 +87,15 @@ public class AutomationServiceImpl implements AutomationService {
             );
 
             // reuse existing whatsApp tab if present, otherwise open a new one
-            Page page = context.pages().isEmpty()
+            whatsappPage = context.pages().isEmpty()
                     ? context.newPage()
                     : context.pages().get(0);
 
             // prevent automation detection
-            page.addInitScript("Object.defineProperty(navigator, 'webdriver', { get: () => false })");
+            whatsappPage.addInitScript("Object.defineProperty(navigator, 'webdriver', { get: () => false })");
 
-            page.navigate("https://web.whatsapp.com/");
+            whatsappPage.navigate("https://web.whatsapp.com/");
 
-            // first time login / state expired
-            Locator loginBtn = page.getByRole(AriaRole.BUTTON,
-                    new Page.GetByRoleOptions().setName("Log in with phone number"));
-
-            try {
-                loginBtn.waitFor(new Locator.WaitForOptions()
-                        .setState(WaitForSelectorState.VISIBLE)
-                        .setTimeout(3000));
-
-                System.out.println("First-time login detected. Entering login flow...");
-
-                loginBtn.click();
-
-                page.waitForSelector("input[aria-label='Type your phone number.']");
-                page.locator("input[aria-label='Type your phone number.']").fill(phoneNumber);
-                page.locator("button:has(span[data-icon='chevron'])").click();
-
-                page.locator("div[contenteditable='true'][role='textbox']").fill(country);
-                page.locator("div[role='listbox'] button:has-text('" + country + "')").click();
-                page.locator("button:has-text('Next')").click();
-
-                String linkingCode = page.getAttribute("[data-link-code]", "data-link-code");
-                System.out.println("\nLINKING CODE:");
-                System.out.println("------------------------");
-                System.out.println(linkingCode);
-                System.out.println("------------------------\n");
-
-            } catch (Exception ignored) {
-                // login button never appeared → session is already logged in
-                System.out.println("Already logged in, skipping login.");
-            }
-
-            // i have 60s to fill the code on whatsapp
-            // if the state is unexpired, wait until search box is visible on the homescreen
-            page.waitForSelector("div[aria-label='Search input textbox'][role='textbox']",
-                    new Page.WaitForSelectorOptions().setTimeout(60000));
-
-            System.out.println("Logged in (session persisted).");
-
-            // send message
-            String searchFor = "Navjot Singh";
-            String message = "test";
-            page.getByRole(AriaRole.PARAGRAPH).click();
-            page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
-                    .fill(searchFor);
-            page.locator("span[title='" + searchFor + "']").click();
-
-            page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + searchFor))
-                    .getByRole(AriaRole.PARAGRAPH).click();
-            page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + searchFor))
-                    .fill(message);
-            page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"))
-                    .click();
-
-            page.waitForTimeout(1000);  // wait a second until message is finished sending
-            System.out.println("Message sent");
 
         } catch (Exception e) {
             System.out.println("ERROR in createSession(): " + e.getMessage());
@@ -146,12 +107,76 @@ public class AutomationServiceImpl implements AutomationService {
 
 
     @Override
-    public boolean handleSavingSession() {
+    public boolean verifySavedState() {
+        // check if first time login / state expired
+        try {
+            Locator loginBtn = whatsappPage.getByRole(AriaRole.BUTTON,
+                    new Page.GetByRoleOptions().setName("Log in with phone number"));
+
+            loginBtn.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(3000));
+
+            System.out.println("First-time login detected. Entering login flow...");
+
+            loginBtn.click();
+
+            whatsappPage.waitForSelector("input[aria-label='Type your phone number.']");
+            whatsappPage.locator("input[aria-label='Type your phone number.']").fill(phoneNumber);
+            whatsappPage.locator("button:has(span[data-icon='chevron'])").click();
+
+            whatsappPage.locator("div[contenteditable='true'][role='textbox']").fill(country);
+            whatsappPage.locator("div[role='listbox'] button:has-text('" + country + "')").click();
+            whatsappPage.locator("button:has-text('Next')").click();
+
+            String linkingCode = whatsappPage.getAttribute("[data-link-code]", "data-link-code");
+            System.out.println("\nLINKING CODE:");
+            System.out.println("------------------------");
+            System.out.println(linkingCode);
+            System.out.println("------------------------\n");
+
+            // i have 60s to fill the code on whatsapp
+            // if the state is unexpired, wait until search box is visible on the homescreen
+            whatsappPage.waitForSelector("div[aria-label='Search input textbox'][role='textbox']",
+                    new Page.WaitForSelectorOptions().setTimeout(60000));
+
+            System.out.println("Logged in (session persisted).");
+
+        } catch (Exception ignored) {
+            // login button never appeared → session is already logged in
+            System.out.println("Already logged in, skipping login.");
+        }
+
         return true;
     }
 
     @Override
-    public boolean sendMessage() {
+    public boolean sendMessage(String recipient, String message) {
+        whatsappPage.getByRole(AriaRole.PARAGRAPH).click();
+        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
+                .fill(recipient);
+        whatsappPage.locator("span[title='" + recipient + "']").first().click();
+
+        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
+                .getByRole(AriaRole.PARAGRAPH).click();
+        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
+                .fill(message);
+        whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"))
+                .click();
+
+        whatsappPage.waitForTimeout(1000);  // wait a second until message is finished sending
+        System.out.println("Message sent");
+
         return true;
+    }
+    @Override
+    public void closeSession() {
+        try {
+            if (context != null) context.close();
+            if (playwright != null) playwright.close();
+            System.out.println("Session closed.");
+        } catch (Exception e) {
+            System.out.println("ERROR while closing session.");
+        }
     }
 }
