@@ -45,16 +45,11 @@ public class BirthdayManagerServiceImpl implements BirthdayManagerService {
             JSONObject jsonobject = jsonarray.getJSONObject(i);
             String name = jsonobject.getString("name");
             String birthDateRaw = jsonobject.getString("birthDate");
-            String personalMessage = jsonobject.getString("personalMessage");
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             LocalDate birthDate = LocalDate.parse(birthDateRaw, formatter);
 
-            Birthday birthday = personalMessage.isEmpty() ?
-                    new Birthday(name, birthDate) :
-                    new Birthday(name, birthDate, personalMessage);
-
-            birthdays.add(birthday);
+            birthdays.add(new Birthday(name, birthDate));
         }
 
         return birthdays;

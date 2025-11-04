@@ -33,24 +33,25 @@ public class AutomationServiceImpl implements AutomationService {
 
     @Override
     public void init() {
-//        List<Birthday> birthdays = findBirthdaysForToday();
-//        if(birthdays.size() < 0) {
-//            System.out.println("No birthday today - " + LocalDate.now());
-//        }
-//
-//        boolean success = createSession();
-//        if(!success) return;
-//
-//        boolean sessionReady = verifySavedState();
-//        if(!sessionReady) return;
+        List<Birthday> birthdays = findBirthdaysForToday();
+        if(birthdays.size() < 0) {
+            System.out.println("No birthday today - " + LocalDate.now());
+        }
 
-        generativeAiService.createImage("Navjot Singh", "Happy Birthday");
+        boolean success = createSession();
+        if(!success) return;
 
-//        birthdays.forEach(b -> {
-//            sendMessage(b.getName(), b.getPersonalMessage());
-//        });
+        boolean sessionReady = verifySavedState();
+        if(!sessionReady) return;
 
-//        closeSession();
+//        generativeAiService.generateBirthdayCardImage("Navjot Singh", "Happy Birthday");
+
+        birthdays.forEach(b -> {
+            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
+            sendMessage(b.getName(), birthdayWish);
+        });
+
+        closeSession();
     }
 
     @Override
@@ -154,7 +155,7 @@ public class AutomationServiceImpl implements AutomationService {
         whatsappPage.getByRole(AriaRole.PARAGRAPH).click();
         whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
                 .fill(recipient);
-        whatsappPage.locator("span[title='" + recipient + "']").click();
+        whatsappPage.locator("span[title='" + recipient + "']").first().click();
 
         whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
                 .getByRole(AriaRole.PARAGRAPH).click();
