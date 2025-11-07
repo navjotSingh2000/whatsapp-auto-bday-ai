@@ -34,8 +34,9 @@ public class AutomationServiceImpl implements AutomationService {
     @Override
     public void init() {
         List<Birthday> birthdays = findBirthdaysForToday();
-        if(birthdays.size() < 0) {
+        if(birthdays.isEmpty()) {
             System.out.println("No birthday today - " + LocalDate.now());
+            return;
         }
 
         boolean success = createSession();
