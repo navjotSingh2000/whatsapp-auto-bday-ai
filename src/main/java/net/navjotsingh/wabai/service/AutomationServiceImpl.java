@@ -20,9 +20,9 @@ public class AutomationServiceImpl implements AutomationService {
     private Playwright playwright;
     private BrowserContext context;
     private Page whatsappPage;
-    @Value("${PHONE_NUMBER}")
+    @Value("${birthday.automation.my-phone-number}")
     private String phoneNumber;
-    @Value("${COUNTRY}")
+    @Value("${birthday.automation.country}")
     private String country;
 
     public AutomationServiceImpl(BirthdayManagerService birthdayManagerService, GenerativeAiService generativeAiService) {
@@ -33,26 +33,26 @@ public class AutomationServiceImpl implements AutomationService {
 
     @Override
     public void init() {
-        List<Birthday> birthdays = findBirthdaysForToday();
-        if(birthdays.isEmpty()) {
-            System.out.println("No birthday today - " + LocalDate.now());
-            return;
-        }
-
-        boolean success = createSession();
-        if(!success) return;
-
-        boolean sessionReady = verifySavedState();
-        if(!sessionReady) return;
-
-//        generativeAiService.generateBirthdayCardImage("Navjot Singh", "Happy Birthday");
-
-        birthdays.forEach(b -> {
-            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
-            sendMessage(b.getName(), birthdayWish);
-        });
-
-        closeSession();
+//        List<Birthday> birthdays = findBirthdaysForToday();
+//        if(birthdays.isEmpty()) {
+//            System.out.println("No birthday today - " + LocalDate.now());
+//            return;
+//        }
+//
+//        boolean success = createSession();
+//        if(!success) return;
+//
+//        boolean sessionReady = verifySavedState();
+//        if(!sessionReady) return;
+//
+        generativeAiService.generateBirthdayCardImage("Navjot Singh");
+//
+//        birthdays.forEach(b -> {
+//            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
+//            sendMessage(b.getName(), birthdayWish);
+//        });
+//
+//        closeSession();
     }
 
     @Override

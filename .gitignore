@@ -37,3 +37,4 @@ birthdays.json
 application-dev.properties
 whatsapp-session
 .DS_Store
+/generated
