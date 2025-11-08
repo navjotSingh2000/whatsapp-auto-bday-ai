@@ -7,6 +7,7 @@ import com.openai.models.images.ImageGenerateParams;
 import com.openai.models.images.ImageModel;
 import com.openai.models.responses.Response;
 import com.openai.models.responses.ResponseCreateParams;
+import net.navjotsingh.wabai.utils.PostProcessImage;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,22 +16,21 @@ public class GenerativeAiServiceImpl implements GenerativeAiService {
     private OpenAIClient client = OpenAIOkHttpClient.fromEnv();;
     private ImageGenerateParams imageGenerateParams;
 
+    private final PostProcessImage postProcessImage;
+
+    public GenerativeAiServiceImpl(PostProcessImage postProcessImage) {
+        this.postProcessImage = postProcessImage;
+    }
+
     @Override
     public boolean init() {
         return true;
     }
 
     @Override
-    public boolean generateBirthdayCardImage(String name) {
-        String prompt =
-                "Create an elegant, visually appealing birthday card image. " +
-                        "Style: modern, classy, soft lighting, pastel colors, premium design. " +
-                        "Include decorative confetti, balloons or ribbons BUT keep the composition clean, not overcrowded. " +
-                        "Center the text aesthetically.\n\n" +
-                        "Main text: 'Happy Birthday " + name + "!' — large, elegant typography.\n\n" +
-                        "Add a short inspiring birthday quote in smaller font beneath it. " +
-                        "Ensure the quote blends nicely with the overall design.\n\n" +
-                        "Do NOT place any watermark. Make sure text is centered, readable, and aesthetically balanced.";
+    public String generateBirthdayCardImage(String name) {
+        String prompt = "Create a simple birthday card image. Note that, i do not want any texts on the image.";
+        System.out.println("Image generation started");
 
         imageGenerateParams = ImageGenerateParams.builder()
                 .responseFormat(ImageGenerateParams.ResponseFormat.URL)
@@ -41,11 +41,17 @@ public class GenerativeAiServiceImpl implements GenerativeAiService {
                 .n(1)
                 .build();
 
-        client.images().generate(imageGenerateParams).data().orElseThrow().stream()
-                .flatMap(image -> image.url().stream())
-                .forEach(System.out::println);
+        String imageUrl = client.images().generate(imageGenerateParams)
+                .data()
+                .orElseThrow()
+                .get(0)
+                .url()
+                .orElseThrow();
 
-        return true;
+        // after image is generated, add the caption of birthday wish in the post processing
+        String finalImagePath = postProcessImage.addNameOnImage(imageUrl, name);
+
+        return finalImagePath;
     }
 
     @Override
