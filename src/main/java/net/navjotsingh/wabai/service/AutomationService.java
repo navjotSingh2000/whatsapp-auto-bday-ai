@@ -11,6 +11,10 @@ public interface AutomationService {
     List<Birthday> findBirthdaysForToday();
     boolean createSession();
     boolean verifySavedState();
-    boolean sendMessage(String recipient, String message);
+    boolean goToChatWindow(String recipient);
+    boolean writeMessage(String recipient, String message);
+    boolean attachImage(String recipient, String imagePath);
+    boolean attachImageWithCaptionMessage(String recipient, String imagePath, String caption);
+    boolean send();
     void closeSession();
 }

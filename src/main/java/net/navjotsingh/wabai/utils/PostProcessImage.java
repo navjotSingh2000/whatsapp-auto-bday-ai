@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.net.URI;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -17,7 +18,7 @@ public class PostProcessImage {
     private String savePath;
     public String addNameOnImage(String imageUrl, String name) {
         try {
-            BufferedImage original = ImageIO.read(new URL(imageUrl));
+            BufferedImage original = ImageIO.read(URI.create(imageUrl).toURL());
 
             int width = original.getWidth();
             int height = original.getHeight();
@@ -72,7 +73,7 @@ public class PostProcessImage {
 
             ImageIO.write(newImage, "png", outputFile);
 
-            System.out.println("saved image at: " + outputFile.getAbsolutePath());
+            System.out.println("Saved image at: " + outputFile.getAbsolutePath());
             return outputFile.getAbsolutePath();
 
         } catch (Exception e) {

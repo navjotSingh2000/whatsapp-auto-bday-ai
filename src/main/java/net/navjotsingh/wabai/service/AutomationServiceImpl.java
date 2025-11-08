@@ -45,11 +45,15 @@ public class AutomationServiceImpl implements AutomationService {
         boolean sessionReady = verifySavedState();
         if(!sessionReady) return;
 
-//        generativeAiService.generateBirthdayCardImage("Navjot Singh");
-
         birthdays.forEach(b -> {
-            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
-            sendMessage(b.getContactName(), birthdayWish);
+            boolean chatWindowOpened = goToChatWindow(b.getContactName());
+            if(chatWindowOpened) {
+                String birthdayImageUrl = generativeAiService.generateBirthdayCardImage(b.getName());
+                String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
+
+                boolean done = attachImageWithCaptionMessage(b.getContactName(), birthdayImageUrl, birthdayWish);
+                if(done) send();
+            }
         });
 
         closeSession();
@@ -152,24 +156,107 @@ public class AutomationServiceImpl implements AutomationService {
     }
 
     @Override
-    public boolean sendMessage(String recipient, String message) {
-        whatsappPage.getByRole(AriaRole.PARAGRAPH).click();
-        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
-                .fill(recipient);
-        whatsappPage.locator("span[title='" + recipient + "']").first().click();
+    public boolean goToChatWindow(String recipient) {
+        try {
+            whatsappPage.getByRole(AriaRole.PARAGRAPH).click();
+            whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Search input textbox"))
+                    .fill(recipient);
+            whatsappPage.locator("span[title='" + recipient + "']").first().click();
+        } catch (Exception ignored) {
+            // unable to open the chat window
+            System.out.println("ERROR while opening the chat window.");
+            return false;
+        }
+        return true;
+    }
 
-        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
-                .getByRole(AriaRole.PARAGRAPH).click();
-        whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
-                .fill(message);
-        whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"))
-                .click();
-
-        whatsappPage.waitForTimeout(1000);  // wait a second until message is finished sending
-        System.out.println("Message sent");
+    @Override
+    public boolean writeMessage(String recipient, String message) {
+        try {
+            whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
+                    .getByRole(AriaRole.PARAGRAPH).click();
+            whatsappPage.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Type to " + recipient))
+                    .fill(message);
+        } catch (Exception ignored) {
+            // unable to write the message
+            System.out.println("ERROR while writing the message.");
+            return false;
+        }
 
         return true;
     }
+
+    @Override
+    public boolean attachImage(String recipient, String imagePath) {
+        try {
+            // click the attach button
+            whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Attach")).click();
+
+            // upload image (input[type=file])
+            whatsappPage.waitForSelector(
+                    "img[src^='blob:'], div[data-testid='media-preview']",
+                    new Page.WaitForSelectorOptions().setTimeout(15000)
+            );
+
+            return true;
+        } catch (Exception e) {
+            System.out.println("ERROR while sending image: " + e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public boolean attachImageWithCaptionMessage(String recipient, String imagePath, String caption) {
+        try {
+            // click the attach button
+            whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Attach")).click();
+
+            // upload image (input[type=file])
+            whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Photos & videos"))
+                    .locator("input[type='file']")
+                    .setInputFiles(Paths.get(imagePath));
+
+            whatsappPage.waitForSelector(
+                    "img[src^='blob:'], div[data-testid='media-preview']",
+                    new Page.WaitForSelectorOptions().setTimeout(15000)
+            );
+
+            System.out.println("Image preview detected");
+
+            // type the caption
+            if (caption != null && !caption.isBlank()) {
+                Locator captionBox = whatsappPage.locator(
+                        "div[contenteditable='true'][role='textbox'][aria-label='Type a message']"
+                );
+                captionBox.click();
+                captionBox.pressSequentially(caption, new Locator.PressSequentiallyOptions().setDelay(40)); // more natural typing
+            }
+
+            return true;
+        } catch (Exception e) {
+            System.out.println("ERROR while attaching image and caption: " + e.getMessage());
+            return false;
+        }
+    }
+
+
+    @Override
+    public boolean send() {
+        try {
+            whatsappPage.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Send"))
+                    .click();
+
+            whatsappPage.waitForTimeout(1000);  // wait a second until message is finished sending
+            System.out.println("Message sent");
+        } catch (Exception ignored) {
+            // unable to send the message
+            System.out.println("ERROR while sending the message.");
+            return false;
+        }
+
+        return true;
+    }
+
     @Override
     public void closeSession() {
         try {

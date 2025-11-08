@@ -28,8 +28,9 @@ public class GenerativeAiServiceImpl implements GenerativeAiService {
     }
 
     @Override
-    public boolean generateBirthdayCardImage(String name) {
+    public String generateBirthdayCardImage(String name) {
         String prompt = "Create a simple birthday card image. Note that, i do not want any texts on the image.";
+        System.out.println("Image generation started");
 
         imageGenerateParams = ImageGenerateParams.builder()
                 .responseFormat(ImageGenerateParams.ResponseFormat.URL)
@@ -50,7 +51,7 @@ public class GenerativeAiServiceImpl implements GenerativeAiService {
         // after image is generated, add the caption of birthday wish in the post processing
         String finalImagePath = postProcessImage.addNameOnImage(imageUrl, name);
 
-        return true;
+        return finalImagePath;
     }
 
     @Override
