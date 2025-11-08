@@ -33,26 +33,26 @@ public class AutomationServiceImpl implements AutomationService {
 
     @Override
     public void init() {
-//        List<Birthday> birthdays = findBirthdaysForToday();
-//        if(birthdays.isEmpty()) {
-//            System.out.println("No birthday today - " + LocalDate.now());
-//            return;
-//        }
-//
-//        boolean success = createSession();
-//        if(!success) return;
-//
-//        boolean sessionReady = verifySavedState();
-//        if(!sessionReady) return;
-//
-        generativeAiService.generateBirthdayCardImage("Navjot Singh");
-//
-//        birthdays.forEach(b -> {
-//            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
-//            sendMessage(b.getName(), birthdayWish);
-//        });
-//
-//        closeSession();
+        List<Birthday> birthdays = findBirthdaysForToday();
+        if(birthdays.isEmpty()) {
+            System.out.println("No birthday today - " + LocalDate.now());
+            return;
+        }
+
+        boolean success = createSession();
+        if(!success) return;
+
+        boolean sessionReady = verifySavedState();
+        if(!sessionReady) return;
+
+//        generativeAiService.generateBirthdayCardImage("Navjot Singh");
+
+        birthdays.forEach(b -> {
+            String birthdayWish = generativeAiService.generateBirthdayWishMessage(b.getName());
+            sendMessage(b.getContactName(), birthdayWish);
+        });
+
+        closeSession();
     }
 
     @Override

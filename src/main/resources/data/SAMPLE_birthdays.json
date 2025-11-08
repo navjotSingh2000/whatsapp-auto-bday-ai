@@ -1,10 +1,12 @@
 [
   {
     "name": "name1",
+    "contactName": "name1 as in contacts",
     "birthDate": "2001-01-11"
   },
   {
     "name": "name2",
+    "contactName": "name2 as in contacts",
     "birthDate": "2002-02-22"
   }
 ]
