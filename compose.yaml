@@ -1,0 +1,15 @@
+services:
+  wabai-app:
+    container_name: wabai-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./data:/data
+    ports:
+      - "${APP_PORT}:8080"
+    restart: unless-stopped
